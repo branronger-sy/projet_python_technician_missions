@@ -56,28 +56,29 @@ def glouton(techs, miss):
             if d < dmin:
                 dmin = d
                 top = t
-        if top is None:
-            return None, float('inf')
-        aff[m['id']] = top['id']
-        pris.add(top['id'])
-        tot += dmin
+        if top is not None:
+            aff[m['id']] = top['id']
+            pris.add(top['id'])
+            tot += dmin
     return aff, tot
 
 def exact(techs, miss):
-    if len(techs) < len(miss):
-        return None, float('inf')
-    bestaff = None
+    bestaff = {}
     bestcout = float('inf')
+    maxnb = 0
     cur = {}
     pris = set()
 
     def backtrack(idx, cout):
-        nonlocal bestaff, bestcout
-        if cout >= bestcout:
+        nonlocal bestaff, bestcout, maxnb
+        nb = len(cur)
+        if nb + (len(miss) - idx) < maxnb:
             return
         if idx == len(miss):
-            bestcout = cout
-            bestaff = cur.copy()
+            if nb > maxnb or (nb == maxnb and cout < bestcout):
+                maxnb = nb
+                bestcout = cout
+                bestaff = cur.copy()
             return
         m = miss[idx]
         for t in techs:
@@ -92,10 +93,9 @@ def exact(techs, miss):
             backtrack(idx + 1, cout + d)
             del cur[m['id']]
             pris.remove(tid)
+        backtrack(idx + 1, cout)
 
     backtrack(0, 0)
-    if bestaff is None:
-        return None, float('inf')
     return bestaff, bestcout
 
 def tracer(techs, miss, aff):
@@ -127,11 +127,11 @@ def verif(techs, miss, aff):
 
     mfake = [{'id': 'Mfake', 'x': 0, 'y': 0, 'competence': 'inconnue'}]
     r1, _ = exact(techs, mfake)
-    print("verif competence absente :", r1 is None)
+    print("verif competence absente :", len(r1) == 0)
 
     tfake = techs[:1]
     r2, _ = exact(tfake, miss)
-    print("verif techs insuffisants :", r2 is None)
+    print("verif techs insuffisants :", len(r2) <= len(tfake))
 
     r3, c3 = exact(techs, [])
     print("verif zero mission :", r3 == {} and c3 == 0)
